@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="page.actions.toolbar">
+            <block class="Magento\Backend\Block\Template"
+                   name="etechflow.admin_reindex.reindex_all_button"
+                   template="ETechFlow_AdminReindex::reindex_all_button.phtml"
+                   acl="ETechFlow_AdminReindex::run"/>
+        </referenceContainer>
+    </body>
+</page>

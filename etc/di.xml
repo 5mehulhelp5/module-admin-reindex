@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Verify CLI registration. CLI commands must be in global etc/di.xml,
+         not etc/adminhtml/di.xml — bin/magento runs in CLI scope, not adminhtml. -->
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="etechflow_ar_verify"
+                      xsi:type="object">ETechFlow\AdminReindex\Console\Command\VerifyCommand</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

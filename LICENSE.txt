@@ -1,0 +1,74 @@
+eTechFlow End User License Agreement
+====================================
+
+ETechFlow_AdminReindex
+Copyright (c) 2026 eTechFlow Pvt. Ltd. All rights reserved.
+
+This software is licensed, not sold. By installing, copying, or otherwise
+using this software ("the Software"), you agree to be bound by the terms
+of this License Agreement.
+
+1. License Grant
+
+   Subject to your payment of the applicable license fee, eTechFlow grants
+   you a non-exclusive, non-transferable license to install and use the
+   Software on a single Magento installation tied to a single production
+   domain ("the Licensed Domain"), as identified by the license key.
+
+   You may install and use the Software at no charge on development and
+   staging environments (`.test`, `.local`, `localhost`, RFC 1918 private
+   IP ranges, `*.magento.cloud`, and similar non-production hosts).
+
+2. Bundle License
+
+   If you purchase the eTechFlow module bundle, the bundle license key
+   activates this Software together with every other eTechFlow module
+   covered by the bundle on the Licensed Domain.
+
+3. Restrictions
+
+   You may not:
+
+   a. Distribute, sublicense, lease, rent, or resell the Software;
+   b. Reverse engineer, decompile, or extract the license-validation
+      mechanism;
+   c. Use the Software on a domain other than the Licensed Domain
+      without a separate license or a documented domain transfer
+      from eTechFlow;
+   d. Remove or alter copyright notices, license keys, or any
+      identifying marks from the Software.
+
+4. Updates
+
+   The license includes one year of updates from the date of purchase.
+   Beyond one year, continued use is permitted but updates and support
+   require a renewal.
+
+5. Termination
+
+   This License terminates automatically if you fail to comply with its
+   terms. Upon termination you must uninstall and destroy all copies of
+   the Software.
+
+6. Warranty Disclaimer
+
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+7. Limitation of Liability
+
+   IN NO EVENT SHALL eTechFlow BE LIABLE FOR ANY DAMAGES ARISING OUT OF
+   THE USE OR INABILITY TO USE THE SOFTWARE, INCLUDING LOST PROFITS, LOST
+   DATA, OR OTHER CONSEQUENTIAL DAMAGES.
+
+8. Governing Law
+
+   This Agreement is governed by the laws of the jurisdiction where
+   eTechFlow is incorporated, without regard to conflict of law principles.
+
+For licensing inquiries, support, and bundle pricing:
+
+    eTechFlow
+    info@etechflow.com
+    https://etechflow.com

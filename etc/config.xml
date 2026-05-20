@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <etechflow_adminreindex>
+            <license>
+                <license_key></license_key>
+                <production_environment>1</production_environment>
+            </license>
+            <general>
+                <enabled>1</enabled>
+            </general>
+        </etechflow_adminreindex>
+    </default>
+</config>

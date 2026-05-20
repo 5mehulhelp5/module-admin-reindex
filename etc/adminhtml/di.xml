@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Inject the "Reindex" mass action into the Index Management grid. -->
+    <type name="Magento\Indexer\Block\Backend\Grid">
+        <plugin name="etechflow_admin_reindex_inject_actions"
+                type="ETechFlow\AdminReindex\Plugin\IndexerGridPlugin"
+                sortOrder="100"/>
+    </type>
+</config>

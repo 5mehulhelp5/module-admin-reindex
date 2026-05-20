@@ -1,0 +1,37 @@
+{
+    "name": "etechflow/module-admin-reindex",
+    "description": "Run Magento indexers from the admin browser instead of CLI. Adds a 'Reindex' mass action + 'Reindex All' button to System → Tools → Index Management. No SSH required. Hyvä / Magento Open Source / Adobe Commerce compatible.",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "eTechFlow Pvt. Ltd.",
+            "email": "info@etechflow.com",
+            "homepage": "https://etechflow.com"
+        }
+    ],
+    "support": {
+        "email": "info@etechflow.com",
+        "source": "https://etechflow.com"
+    },
+    "require": {
+        "php": "~8.1.0||~8.2.0||~8.3.0||~8.4.0",
+        "magento/framework": "^103.0||^104.0",
+        "magento/module-indexer": "^100.4||^101.0",
+        "magento/module-backend": "^102.0||^103.0",
+        "magento/module-config": "^101.2||^102.0",
+        "magento/module-store": "^101.1||^102.0"
+    },
+    "suggest": {
+        "etechflow/module-next-day-eligibility": "Part of the eTechFlow module bundle — one bundle key activates every eTechFlow module."
+    },
+    "autoload": {
+        "psr-4": {
+            "ETechFlow\\AdminReindex\\": ""
+        },
+        "files": [
+            "registration.php"
+        ]
+    }
+}

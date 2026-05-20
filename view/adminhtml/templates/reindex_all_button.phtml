@@ -1,0 +1,18 @@
+<?php
+declare(strict_types=1);
+/** @var \Magento\Backend\Block\Template $block */
+/** @var \Magento\Framework\Escaper $escaper */
+
+$url     = $block->getUrl('etechflow_admin_reindex/indexer/massReindex');
+$formKey = $block->getFormKey();
+$confirm = $escaper->escapeJs(__('Reindex ALL indexers? This can take several minutes on large catalogs.'));
+?>
+<form id="etechflow-ar-reindex-all-form" method="post" action="<?= $escaper->escapeUrl($url) ?>" style="display:inline-block;margin-left:8px;">
+    <input type="hidden" name="form_key"     value="<?= $escaper->escapeHtmlAttr($formKey) ?>"/>
+    <input type="hidden" name="indexer_ids"  value="__all__"/>
+    <button type="submit"
+            class="action-primary"
+            onclick="return confirm('<?= /* @noEscape */ $confirm ?>');">
+        <span><?= $escaper->escapeHtml(__('Reindex All')) ?></span>
+    </button>
+</form>
