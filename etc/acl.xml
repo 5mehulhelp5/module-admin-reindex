@@ -12,7 +12,21 @@
                                       sortOrder="100"/>
                         </resource>
                     </resource>
-                    <resource id="Magento_Backend::stores">
+                </resource>
+                <!--
+                    Two fixes (v1.0.1):
+                    1. Magento_Backend::stores must be a SIBLING of system,
+                       not nested under it. Previous version nested it
+                       wrongly which caused ACL merge issues.
+                    2. Magento_Config::config must nest under
+                       stores_settings (Magento Core's parent) — not
+                       directly under stores. Otherwise the merger sees
+                       two different paths for the same ID and the
+                       merged XSD fails with
+                       "Duplicate key-sequence Magento_Config::config".
+                -->
+                <resource id="Magento_Backend::stores">
+                    <resource id="Magento_Backend::stores_settings">
                         <resource id="Magento_Config::config">
                             <resource id="ETechFlow_AdminReindex::config"
                                       title="ETechFlow Admin Reindex Configuration"
