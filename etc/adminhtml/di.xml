@@ -2,10 +2,16 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
-    <!-- Inject the "Reindex" mass action into the Index Management grid. -->
     <type name="Magento\Indexer\Block\Backend\Grid">
         <plugin name="etechflow_admin_reindex_inject_actions"
                 type="ETechFlow\AdminReindex\Plugin\IndexerGridPlugin"
                 sortOrder="100"/>
     </type>
+
+    <type name="Magento\Config\Model\Config">
+        <plugin name="etechflow_ar_block_config_save_without_license"
+                type="ETechFlow\AdminReindex\Plugin\Adminhtml\Config\BlockSaveWithoutLicense"
+                sortOrder="10"/>
+    </type>
+
 </config>

@@ -6,10 +6,25 @@
             <license>
                 <license_key></license_key>
                 <production_environment>1</production_environment>
+                <portal_url></portal_url>
+                <portal_api_url></portal_api_url>
+                <issued_key></issued_key>
+                <issued_domain></issued_domain>
+                <issued_at>0</issued_at>
+                <stripe_session></stripe_session>
+                <revoked>0</revoked>
             </license>
             <general>
                 <enabled>1</enabled>
             </general>
+            <payment>
+                <stripe_secret_key></stripe_secret_key>
+                <stripe_publishable_key></stripe_publishable_key>
+                <stripe_price_solo></stripe_price_solo>
+                <stripe_price_growth></stripe_price_growth>
+                <stripe_price_business></stripe_price_business>
+                <stripe_price_all_channels></stripe_price_all_channels>
+            </payment>
         </etechflow_adminreindex>
     </default>
 </config>

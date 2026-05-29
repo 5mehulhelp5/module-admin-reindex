@@ -4,40 +4,30 @@ declare(strict_types=1);
 
 namespace ETechFlow\AdminReindex\Model;
 
+use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\Config\Storage\WriterInterface;
+use Magento\Framework\HTTP\Client\Curl;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
 
-/**
- * Validates the per-domain license key for ETechFlow_AdminReindex.
- *
- * Customers receive a license key bound to their Magento base URL host.
- * The module gates its behaviour on this validation: an invalid key
- * causes the module to silently no-op (the admin Reindex buttons
- * vanish) so the install never breaks if a key expires or is missing.
- *
- * Same pattern as every other eTechFlow module:
- *   - Per-module key activates this module only.
- *   - Bundle key (shared HMAC secret across modules) activates ALL
- *     eTechFlow modules at once.
- *   - "Production Environment = No" bypasses licensing for dev/staging.
- *   - Common dev hostnames (.test, .local, IPs, *.magento.cloud, etc.)
- *     are detected automatically and bypass licensing too.
- */
 class LicenseValidator
 {
     public const XML_PATH_LICENSE_KEY            = 'etechflow_adminreindex/license/license_key';
     public const XML_PATH_PRODUCTION_ENVIRONMENT = 'etechflow_adminreindex/license/production_environment';
+    public const XML_PATH_PORTAL_URL             = 'etechflow_adminreindex/license/portal_url';
+    public const XML_PATH_PORTAL_API_URL         = 'etechflow_adminreindex/license/portal_api_url';
+    public const XML_PATH_ISSUED_KEY             = 'etechflow_adminreindex/license/issued_key';
+    public const XML_PATH_ISSUED_DOMAIN          = 'etechflow_adminreindex/license/issued_domain';
+    public const XML_PATH_ISSUED_AT              = 'etechflow_adminreindex/license/issued_at';
+    public const XML_PATH_STRIPE_SESSION         = 'etechflow_adminreindex/license/stripe_session';
+    public const XML_PATH_REVOKED                = 'etechflow_adminreindex/license/revoked';
 
-    /** Shared config path — same value across all eTechFlow modules. */
     public const XML_PATH_BUNDLE_LICENSE_KEY = 'etechflow_bundle/license/license_key';
 
     private const MODULE_ID = 'admin-reindex';
-
-    /** Shared bundle identifier — must match across all eTechFlow modules. */
     private const BUNDLE_ID = 'etechflow-bundle';
 
-    /** Per-module HMAC secret. Split across constants to make casual extraction harder. */
     private const SECRET_FRAGMENTS = [
         'eTF-AR-2026',
         'r4M9-tQ8w',
@@ -45,7 +35,6 @@ class LicenseValidator
         'F7sV-cZ3x',
     ];
 
-    /** Shared bundle HMAC secret. MUST be identical in every eTechFlow module's LicenseValidator. */
     private const BUNDLE_SECRET_FRAGMENTS = [
         'eTF-BUNDLE-2026',
         'k2D9-mP4x',
@@ -53,23 +42,19 @@ class LicenseValidator
         'X7tY-zW5q',
     ];
 
-    /**
-     * Constructor.
-     *
-     * @param ScopeConfigInterface  $scopeConfig
-     * @param StoreManagerInterface $storeManager
-     */
+    public const CACHE_TAG            = 'ETECHFLOW_AR';
+    public const PORTAL_CACHE_TTL     = 120;  // 2 min — IP revocations apply within 2 min
+    public const PORTAL_CACHE_TTL_BAD = 60;   // 60 sec — re-check quickly after block lifted   // short TTL for invalid results so IP changes take effect quickly
+
     public function __construct(
         private readonly ScopeConfigInterface $scopeConfig,
-        private readonly StoreManagerInterface $storeManager
+        private readonly StoreManagerInterface $storeManager,
+        private readonly CacheInterface $cache,
+        private readonly Curl $curl,
+        private readonly WriterInterface $configWriter
     ) {
     }
 
-    /**
-     * Whether the module is licensed for the current Magento install.
-     *
-     * @return bool
-     */
     public function isValid(): bool
     {
         $host = $this->getCurrentHost();
@@ -77,15 +62,64 @@ class LicenseValidator
             return false;
         }
 
-        if (!$this->isProductionEnvironment()) {
+        // Explicit revocation always wins (for legacy HMAC keys).
+        // SP- keys bypass this because validateViaPortal() controls the revoke state.
+        $productionConfig = $this->scopeConfig->getValue(
+            self::XML_PATH_PRODUCTION_ENVIRONMENT,
+            ScopeInterface::SCOPE_STORE
+        );
+
+        // Admin explicitly set production_environment = No -> dev bypass.
+        if ($productionConfig !== null && $productionConfig !== '' && !(bool) $productionConfig) {
             return true;
         }
 
+        // Admin explicitly set production_environment = Yes -> ALWAYS enforce license.
+        if ($productionConfig !== null && $productionConfig !== '' && (bool) $productionConfig) {
+            return $this->checkKey($host);
+        }
+
+        // production_environment not configured yet -> fall back to hostname auto-detection.
         if ($this->isDevelopmentHost($host)) {
             return true;
         }
 
+        return $this->checkKey($host);
+    }
+
+    private function checkKey(string $host): bool
+    {
         $configuredKey = $this->getConfiguredKey();
+        $isEmptyKey    = ($configuredKey === '');
+
+        // If license_key is empty (cleared after IP block), fall back to issued_key.
+        // We skip the grace window for fallback to prevent bypassing the IP check.
+        if ($isEmptyKey) {
+            $configuredKey = trim((string) $this->scopeConfig->getValue(self::XML_PATH_ISSUED_KEY));
+            if ($configuredKey === '') {
+                return false;
+            }
+        }
+
+        if (str_starts_with($configuredKey, 'SP-')) {
+            // Apply 48h grace window only when license_key is explicitly set (not fallback).
+            if (!$isEmptyKey && $this->isLocallyIssuedKey($configuredKey, $host)) {
+                return true;
+            }
+            // Always call portal for SP- keys (handles both normal and fallback paths).
+            $valid = $this->validateViaPortal($host, $configuredKey);
+            // If portal approves and we were using the fallback, restore license_key.
+            if ($valid && $isEmptyKey) {
+                $this->writeLicenseKey($configuredKey);
+            }
+            return $valid;
+        }
+
+        // Legacy HMAC keys — check explicit revoke first.
+        if ($this->isExplicitlyRevoked()) {
+            return false;
+        }
+
         if ($configuredKey !== '' && hash_equals($this->computeKey($host), $configuredKey)) {
             return true;
         }
@@ -98,43 +132,144 @@ class LicenseValidator
         return false;
     }
 
+    private function isLocallyIssuedKey(string $key, string $host): bool
+    {
+        $issuedKey = trim((string) $this->scopeConfig->getValue(self::XML_PATH_ISSUED_KEY));
+        if ($issuedKey === '' || !hash_equals($issuedKey, $key)) {
+            return false;
+        }
+        $issuedDomain = trim((string) $this->scopeConfig->getValue(self::XML_PATH_ISSUED_DOMAIN));
+        if ($issuedDomain === '' || $this->canonicalize($issuedDomain) !== $this->canonicalize($host)) {
+            return false;
+        }
+        $sessionId = trim((string) $this->scopeConfig->getValue(self::XML_PATH_STRIPE_SESSION));
+        if ($sessionId === '') {
+            return false;
+        }
+        $issuedAt = (int) $this->scopeConfig->getValue(self::XML_PATH_ISSUED_AT);
+        if ($issuedAt === 0) {
+            return false;
+        }
+        return (time() - $issuedAt) < 172800;
+    }
+
+    private function validateViaPortal(string $host, string $key): bool
+    {
+        $cacheKey = 'etf_ar_lic_' . md5($host . ':' . $key);
+        $cached   = $this->cache->load($cacheKey);
+        if ($cached !== false) {
+            return $cached === '1';
+        }
+
+        $apiBase = $this->getPortalApiBase();
+        if ($apiBase === '') {
+            return false;
+        }
+
+        $url = rtrim($apiBase, '/') . '/license/validate'
+            . '?domain='      . urlencode($this->canonicalize($host))
+            . '&license_key=' . urlencode($key)
+            . '&platform=magento&module=admin-reindex';
+
+        $valid     = false;
+        $ipBlocked = false;
+        try {
+            $this->curl->setOption(CURLOPT_SSL_VERIFYPEER, false);
+            $this->curl->setTimeout(15);
+            $this->curl->addHeader('Accept', 'application/json');
+            $this->curl->addHeader('User-Agent', 'ETechFlow-AR/1.0');
+            $this->curl->get($url);
+            $status = $this->curl->getStatus();
+            $body   = $this->curl->getBody();
+            if ($status === 200 && $body) {
+                $data  = json_decode($body, true);
+                $valid = !empty($data['valid']);
+            } elseif ($status === 403 && $body) {
+                $data      = json_decode($body, true);
+                $ipBlocked = !empty($data['ip_blocked']);
+            }
+        } catch (\Exception) {
+            $valid = false;
+        }
+
+        // Valid results: 1 hour cache. Invalid: 60-second cache so IP changes apply quickly.
+        $ttl = $valid ? self::PORTAL_CACHE_TTL : self::PORTAL_CACHE_TTL_BAD;
+        $this->cache->save(
+            $valid ? '1' : '0',
+            $cacheKey,
+            [self::CACHE_TAG],
+            $ttl
+        );
+
+        // Portal explicitly blocked this IP -> clear license_key from admin settings.
+        if ($ipBlocked) {
+            $this->clearLicenseKey();
+        }
+
+        return $valid;
+    }
+
     /**
-     * Compute the per-module license key for an arbitrary host.
-     *
-     * @param string $host
-     * @return string
+     * Clear license_key from config so the gate page shows immediately.
+     * IP restoration will auto-restore it via the issued_key fallback in checkKey().
      */
+    private function clearLicenseKey(): void
+    {
+        try {
+            $currentKey = trim((string) $this->scopeConfig->getValue(
+                self::XML_PATH_LICENSE_KEY, ScopeInterface::SCOPE_STORE
+            ));
+            if ($currentKey === '') {
+                return; // Already cleared — avoid unnecessary writes.
+            }
+            $this->configWriter->save(self::XML_PATH_LICENSE_KEY, '');
+            $this->cache->clean([\Magento\Framework\App\Cache\Type\Config::CACHE_TAG]);
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
+     * Restore license_key after IP is re-added to the portal.
+     */
+    private function writeLicenseKey(string $key): void
+    {
+        try {
+            $this->configWriter->save(self::XML_PATH_LICENSE_KEY, $key);
+            $this->cache->clean([\Magento\Framework\App\Cache\Type\Config::CACHE_TAG]);
+        } catch (\Throwable) {
+        }
+    }
+
+    private function getPortalApiBase(): string
+    {
+        $api = trim((string) $this->scopeConfig->getValue(self::XML_PATH_PORTAL_API_URL));
+        if ($api !== '') {
+            return $api;
+        }
+        $browser = trim((string) $this->scopeConfig->getValue(self::XML_PATH_PORTAL_URL));
+        if ($browser !== '' && !str_contains($browser, '127.0.0.1') && !str_contains($browser, 'localhost')) {
+            return $browser;
+        }
+        return '';
+    }
+
     public function computeKey(string $host): string
     {
         $payload = $this->canonicalize($host) . ':' . self::MODULE_ID;
         $secret  = implode('', self::SECRET_FRAGMENTS);
         $raw     = hash_hmac('sha256', $payload, $secret, true);
-
         return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 
-    /**
-     * Compute the bundle license key for an arbitrary host.
-     *
-     * @param string $host
-     * @return string
-     */
     public function computeBundleKey(string $host): string
     {
         $payload = $this->canonicalize($host) . ':' . self::BUNDLE_ID;
         $secret  = implode('', self::BUNDLE_SECRET_FRAGMENTS);
         $raw     = hash_hmac('sha256', $payload, $secret, true);
-
         return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 
-    /**
-     * Canonicalize a host: lowercase, strip whitespace, drop a leading www.
-     *
-     * @param string $host
-     * @return string
-     */
-    private function canonicalize(string $host): string
+    public function canonicalize(string $host): string
     {
         $host = strtolower(trim($host));
         if (str_starts_with($host, 'www.')) {
@@ -143,80 +278,42 @@ class LicenseValidator
         return $host;
     }
 
-    /**
-     * @return string
-     */
     public function getConfiguredKey(): string
     {
-        $value = $this->scopeConfig->getValue(
-            self::XML_PATH_LICENSE_KEY,
-            ScopeInterface::SCOPE_STORE
-        );
-        return trim((string) $value);
+        return trim((string) $this->scopeConfig->getValue(self::XML_PATH_LICENSE_KEY, ScopeInterface::SCOPE_STORE));
     }
 
-    /**
-     * @return string
-     */
     public function getConfiguredBundleKey(): string
     {
-        $value = $this->scopeConfig->getValue(
-            self::XML_PATH_BUNDLE_LICENSE_KEY,
-            ScopeInterface::SCOPE_STORE
-        );
-        return trim((string) $value);
+        return trim((string) $this->scopeConfig->getValue(self::XML_PATH_BUNDLE_LICENSE_KEY, ScopeInterface::SCOPE_STORE));
     }
 
-    /**
-     * @return bool
-     */
     public function isProductionEnvironment(): bool
     {
-        $value = $this->scopeConfig->getValue(
-            self::XML_PATH_PRODUCTION_ENVIRONMENT,
-            ScopeInterface::SCOPE_STORE
-        );
+        $value = $this->scopeConfig->getValue(self::XML_PATH_PRODUCTION_ENVIRONMENT, ScopeInterface::SCOPE_STORE);
         if ($value === null || $value === '') {
             return true;
         }
         return (bool) $value;
     }
 
-    /**
-     * @return string
-     */
     public function getCurrentHost(): string
     {
         try {
-            $url = $this->storeManager->getStore()->getBaseUrl();
+            $url  = $this->storeManager->getStore()->getBaseUrl();
             $host = parse_url($url, PHP_URL_HOST);
             return is_string($host) ? strtolower($host) : '';
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return '';
         }
     }
 
-    /**
-     * Public wrapper for the dev-host detector — admin status block uses it.
-     *
-     * @param string|null $host
-     * @return bool
-     */
     public function isDevHost(?string $host = null): bool
     {
-        $check = $host !== null
-            ? $this->canonicalize($host)
-            : $this->canonicalize($this->getCurrentHost());
+        $check = $host !== null ? strtolower(trim($host)) : $this->canonicalize($this->getCurrentHost());
         return $this->isDevelopmentHost($check);
     }
 
-    /**
-     * Identify development hosts that bypass licensing. Mirrors the
-     * standard Amasty/Aheadworks/MageWorx pattern.
-     *
-     * @param string $host
-     * @return bool
-     */
     private function isDevelopmentHost(string $host): bool
     {
         if ($host === 'localhost' || str_starts_with($host, '127.')) {
@@ -228,39 +325,23 @@ class LicenseValidator
         if (preg_match('/^172\.(1[6-9]|2[0-9]|3[01])\./', $host)) {
             return true;
         }
-
-        $devSuffixes = ['.test', '.local', '.localhost', '.dev', '.example', '.invalid'];
-        foreach ($devSuffixes as $suffix) {
-            if (str_ends_with($host, $suffix)) {
-                return true;
-            }
+        foreach (['.test', '.local', '.localhost', '.dev', '.example', '.invalid'] as $s) {
+            if (str_ends_with($host, $s)) { return true; }
         }
-
-        $devPrefixes = ['staging.', 'stage.', 'dev.', 'qa.', 'uat.', 'test.', 'preview.', 'sandbox.'];
-        foreach ($devPrefixes as $prefix) {
-            if (str_starts_with($host, $prefix)) {
-                return true;
-            }
+        foreach (['staging.', 'stage.', 'dev.', 'qa.', 'uat.', 'test.', 'preview.', 'sandbox.'] as $p) {
+            if (str_starts_with($host, $p)) { return true; }
         }
-
-        if (preg_match('/-(staging|stage|dev|qa|uat|test|preview|sandbox)\./', $host)) {
-            return true;
+        foreach (['.magento.cloud', '.magentocloud.com', '.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev', '.loca.lt'] as $s) {
+            if (str_ends_with($host, $s)) { return true; }
         }
-
-        $cloudSuffixes = ['.magento.cloud', '.magentocloud.com', '.cloud.magento'];
-        foreach ($cloudSuffixes as $suffix) {
-            if (str_ends_with($host, $suffix)) {
-                return true;
-            }
-        }
-
-        $tunnelSuffixes = ['.ngrok.io', '.ngrok-free.app', '.loca.lt', '.serveo.net'];
-        foreach ($tunnelSuffixes as $suffix) {
-            if (str_ends_with($host, $suffix)) {
-                return true;
-            }
-        }
-
         return false;
+    }
+
+    private function isExplicitlyRevoked(): bool
+    {
+        return (string) $this->scopeConfig->getValue(
+            self::XML_PATH_REVOKED,
+            ScopeInterface::SCOPE_STORE
+        ) === '1';
     }
 }

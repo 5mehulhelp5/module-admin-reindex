@@ -16,81 +16,89 @@
             <tab>etechflow</tab>
             <resource>ETechFlow_AdminReindex::config</resource>
 
-            <group id="license"
-                   translate="label"
-                   type="text"
-                   sortOrder="5"
-                   showInDefault="1"
-                   showInWebsite="0"
-                   showInStore="0">
+            <group id="license" translate="label" type="text" sortOrder="5"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
                 <label>License</label>
-                <field id="production_environment"
-                       translate="label comment tooltip"
-                       type="select"
-                       sortOrder="5"
-                       showInDefault="1"
-                       showInWebsite="0"
-                       showInStore="0">
+                <field id="production_environment" translate="label" type="select" sortOrder="5"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Production Environment</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <tooltip>Yes for live sites, No for dev/staging on non-standard domains.</tooltip>
-                    <comment><![CDATA[
-                        <strong>Yes</strong> = this is your live site. The module checks the licence
-                        key against the current domain. If invalid, the module silently disables itself.<br/>
-                        <strong>No</strong> = this is dev/staging. The module runs at full features
-                        without a licence — use this on non-standard dev domains the auto-detector misses.<br/>
-                        Default: Yes.
-                    ]]></comment>
+                    <comment><![CDATA[<strong>Yes</strong> = live site, license enforced. <strong>No</strong> = dev/staging, runs without license.]]></comment>
                 </field>
-                <field id="license_key"
-                       translate="label comment tooltip"
-                       type="text"
-                       sortOrder="10"
-                       showInDefault="1"
-                       showInWebsite="0"
-                       showInStore="0">
+                <field id="license_key" translate="label" type="text" sortOrder="10"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>License Key</label>
-                    <tooltip>Paste your purchase-email key here. Bound to the production domain.</tooltip>
-                    <comment><![CDATA[
-                        Paste the key from your purchase email. Tied to your live website's address.<br/>
-                        Test or staging sites don't need a key — the module detects them automatically.<br/>
-                        <code>www.</code> doesn't matter — one key works whether your address is
-                        <code>shop.com</code> or <code>www.shop.com</code>.<br/><br/>
-                        Bought the eTechFlow bundle? Enter the bundle key in the <em>Bundle License</em>
-                        section instead and it activates every eTechFlow module at once.
-                    ]]></comment>
+                    <comment><![CDATA[Subscription key (SP-XXXX-XXXX-XXXX-XXXX). Validated against your domain and server IP.]]></comment>
+                </field>
+                <field id="portal_url" translate="label" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Portal Browser URL</label>
+                    <comment><![CDATA[For local dev: http://127.0.0.1:5000. For production: your deployed portal URL.]]></comment>
+                </field>
+                <field id="portal_api_url" translate="label" type="text" sortOrder="30"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Portal API URL</label>
+                    <comment><![CDATA[Called by the Magento server to validate keys. Must be publicly reachable (not localhost).]]></comment>
+                </field>
+                <field id="issued_key" translate="label" type="text" sortOrder="40"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Issued License Key</label>
+                    <comment><![CDATA[Read-only. Set automatically after successful payment.]]></comment>
+                </field>
+                <field id="revoked" type="hidden" sortOrder="99"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Revoked</label>
                 </field>
             </group>
 
-            <group id="general"
-                   translate="label"
-                   type="text"
-                   sortOrder="10"
-                   showInDefault="1"
-                   showInWebsite="0"
-                   showInStore="0">
+            <group id="general" translate="label" type="text" sortOrder="10"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
                 <label>General Settings</label>
-                <field id="enabled"
-                       translate="label comment tooltip"
-                       type="select"
-                       sortOrder="10"
-                       showInDefault="1"
-                       showInWebsite="0"
-                       showInStore="0">
+                <field id="enabled" translate="label" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Enable Module</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <tooltip>Master on/off switch. No = the Reindex buttons disappear from the admin grid.</tooltip>
-                    <comment><![CDATA[
-                        Master on/off switch.<br/>
-                        <strong>Yes</strong> = the module runs: the "Reindex" mass action and "Reindex All"
-                        button appear on System → Tools → Index Management for users with the
-                        <code>ETechFlow_AdminReindex::run</code> ACL resource.<br/>
-                        <strong>No</strong> = the module does nothing. The original stock Index Management
-                        page shows unchanged. Useful if you want to temporarily disable the feature without
-                        uninstalling the module.
-                    ]]></comment>
+                    <comment><![CDATA[Yes = Reindex mass action and Reindex All button appear. No = module inactive.]]></comment>
                 </field>
             </group>
+
+            <group id="payment" translate="label" type="text" sortOrder="30"
+                   showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Payment (Stripe)</label>
+                <comment>Add your Stripe keys to enable in-Magento subscription payment.</comment>
+                <field id="stripe_secret_key" translate="label" type="obscure" sortOrder="10"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Stripe Secret Key</label>
+                    <comment><![CDATA[sk_live_... or sk_test_...]]></comment>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="stripe_publishable_key" translate="label" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Stripe Publishable Key</label>
+                    <comment><![CDATA[pk_live_... or pk_test_...]]></comment>
+                </field>
+                <field id="stripe_price_solo" translate="label" type="text" sortOrder="30"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Stripe Price ID: Solo</label>
+                    <comment>Optional. Overrides built-in one-time price (GBP 19).</comment>
+                </field>
+                <field id="stripe_price_growth" translate="label" type="text" sortOrder="40"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Stripe Price ID: Growth</label>
+                    <comment>Optional. Overrides built-in one-time price (GBP 39).</comment>
+                </field>
+                <field id="stripe_price_business" translate="label" type="text" sortOrder="50"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Stripe Price ID: Business</label>
+                    <comment>Optional. Overrides built-in one-time price (GBP 69).</comment>
+                </field>
+                <field id="stripe_price_all_channels" translate="label" type="text" sortOrder="60"
+                       showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Stripe Price ID: All-Channels</label>
+                    <comment>Optional. Overrides built-in one-time price (GBP 99).</comment>
+                </field>
+            </group>
+
         </section>
     </system>
 </config>
