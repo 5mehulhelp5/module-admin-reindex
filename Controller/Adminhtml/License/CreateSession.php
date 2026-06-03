@@ -115,10 +115,9 @@ class CreateSession extends Action
             return ['price_id' => $priceId, 'mode' => 'subscription', 'label' => ucfirst($plan) . ' Plan'];
         }
         $catalog = [
-            'solo'         => ['amount' => 1900,  'currency' => 'gbp', 'label' => 'Solo Plan',         'mode' => 'payment'],
-            'growth'       => ['amount' => 3900,  'currency' => 'gbp', 'label' => 'Growth Plan',       'mode' => 'payment'],
-            'business'     => ['amount' => 6900,  'currency' => 'gbp', 'label' => 'Business Plan',     'mode' => 'payment'],
-            'all_channels' => ['amount' => 9900,  'currency' => 'gbp', 'label' => 'All-Channels Plan', 'mode' => 'payment'],
+            'reindex_weekly'  => ['amount' => 500,   'currency' => 'usd', 'label' => 'Weekly Plan',  'mode' => 'payment'],
+            'reindex_monthly' => ['amount' => 1500,  'currency' => 'usd', 'label' => 'Monthly Plan', 'mode' => 'payment'],
+            'reindex_yearly'  => ['amount' => 15000, 'currency' => 'usd', 'label' => 'Yearly Plan',  'mode' => 'payment'],
         ];
         return $catalog[$plan] ?? null;
     }

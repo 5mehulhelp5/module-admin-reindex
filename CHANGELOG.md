@@ -4,6 +4,12 @@ All notable changes to this module. Adheres to [Semantic Versioning](https://sem
 
 ---
 
+## [1.1.1] — 2026-06-03 — Billing-period plans (weekly / monthly / yearly)
+
+### Changed
+
+- **License gate now offers billing periods instead of one-time tiers.** Replaced the Solo/Growth/Business/All-Channels one-time-purchase cards with **Weekly $5 / Monthly $15 / Yearly $150** (USD; yearly ≈ 2 months free). Updated `Controller/Adminhtml/License/CreateSession.php` plan catalog (`reindex_weekly|monthly|yearly`) and the gate template. Matches the eTechFlow portal's new billing-period subscription model.
+
 ## [1.0.0] — 2026-05-19
 
 ### Initial commercial release
