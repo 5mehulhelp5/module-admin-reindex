@@ -90,8 +90,6 @@ class Callback implements HttpGetActionInterface
         $this->cache->remove('etf_ar_lic_' . md5($domain . ':' . $key));
 
         $this->notifyPortal($sessionId, $domain, $name, $email, $plan, $key, $amount);
-        // Call /license/validate so the portal captures the server IP on first use.
-        $this->triggerPortalIpRegistration($domain, $key);
 
         if ($returnUrl !== '') {
             $redirect = $this->redirectFactory->create();

@@ -11,6 +11,7 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\HTTP\Client\Curl;
+use Magento\Framework\HTTP\Client\CurlFactory;
 use Magento\Store\Model\StoreManagerInterface;
 
 class CreateSession extends Action
@@ -22,6 +23,7 @@ class CreateSession extends Action
         private readonly JsonFactory $jsonFactory,
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly Curl $curl,
+        private readonly CurlFactory $curlFactory,
         private readonly LicenseValidator $licenseValidator,
         private readonly StoreManagerInterface $storeManager
     ) {
@@ -110,16 +112,66 @@ class CreateSession extends Action
 
     private function getPlanInfo(string $plan): ?array
     {
+        // Optional: a configured Stripe Price ID gives a true Stripe subscription.
         $priceId = trim((string) $this->scopeConfig->getValue('etechflow_adminreindex/payment/stripe_price_' . str_replace('-', '_', $plan)));
         if ($priceId !== '') {
             return ['price_id' => $priceId, 'mode' => 'subscription', 'label' => ucfirst($plan) . ' Plan'];
         }
-        $catalog = [
-            'reindex_weekly'  => ['amount' => 500,   'currency' => 'usd', 'label' => 'Weekly Plan',  'mode' => 'payment'],
-            'reindex_monthly' => ['amount' => 1500,  'currency' => 'usd', 'label' => 'Monthly Plan', 'mode' => 'payment'],
-            'reindex_yearly'  => ['amount' => 15000, 'currency' => 'usd', 'label' => 'Yearly Plan',  'mode' => 'payment'],
-        ];
-        return $catalog[$plan] ?? null;
+        // Otherwise price AUTHORITATIVELY from the portal — this reflects the
+        // admin's recurring/one-time choice (incl. the reindex_onetime plan).
+        $card = $this->fetchPlanFromPortal($plan);
+        if ($card !== null) {
+            return ['amount' => $card['amount'], 'currency' => 'usd', 'label' => $card['name'], 'mode' => 'payment'];
+        }
+        return null;
+    }
+
+    /**
+     * Look up a plan's amount (cents) + name from the portal /license/plans.
+     *
+     * @return array{amount:int, name:string}|null
+     */
+    private function fetchPlanFromPortal(string $slug): ?array
+    {
+        $api = trim((string) $this->scopeConfig->getValue('etechflow_adminreindex/license/portal_api_url'));
+        if ($api === '') {
+            $api = trim((string) $this->scopeConfig->getValue('etechflow_adminreindex/license/portal_url'));
+        }
+        $api = rtrim($api, '/');
+        if ($api === '') {
+            return null;
+        }
+        $domain = $this->licenseValidator->getCurrentHost();
+        $url = $api . '/license/plans?module=admin-reindex&domain=' . urlencode($domain);
+        try {
+            $curl = $this->curlFactory->create();
+            $curl->setOption(CURLOPT_SSL_VERIFYPEER, false);
+            $curl->setTimeout(10);
+            $curl->addHeader('Accept', 'application/json');
+            $curl->addHeader('ngrok-skip-browser-warning', '1');
+            $curl->get($url);
+            $status = (int) $curl->getStatus();
+            $body   = (string) $curl->getBody();
+        } catch (\Throwable) {
+            return null;
+        }
+        if ($status !== 200 || $body === '') {
+            return null;
+        }
+        $data = json_decode($body, true);
+        if (!is_array($data) || empty($data['plans']) || !is_array($data['plans'])) {
+            return null;
+        }
+        foreach ($data['plans'] as $card) {
+            if (($card['slug'] ?? '') === $slug) {
+                $amount = (int) ($card['amount_cents'] ?? 0);
+                if ($amount <= 0) {
+                    return null;
+                }
+                return ['amount' => $amount, 'name' => (string) ($card['name'] ?? 'Admin Reindex')];
+            }
+        }
+        return null;
     }
 
     private function callStripe(

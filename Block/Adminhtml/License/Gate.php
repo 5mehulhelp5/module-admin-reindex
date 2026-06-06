@@ -44,6 +44,26 @@ class Gate extends Template
         return rtrim($v, '/');
     }
 
+    private const PORTAL_API_URL_PATH = 'etechflow_adminreindex/license/portal_api_url';
+
+    /**
+     * Portal /license/plans endpoint for this module + domain. The portal admin
+     * decides recurring vs one-time, so the gate renders the matching cards.
+     */
+    public function getPlansUrl(): string
+    {
+        $api = trim((string) $this->_scopeConfig->getValue(self::PORTAL_API_URL_PATH));
+        if ($api === '') {
+            $api = trim((string) $this->_scopeConfig->getValue(self::PORTAL_URL_PATH));
+        }
+        $api = rtrim($api, '/');
+        if ($api === '') {
+            return '';
+        }
+        return $api . '/license/plans?module=admin-reindex&domain='
+            . urlencode($this->licenseValidator->getCurrentHost());
+    }
+
     public function getCurrentDomain(): string
     {
         return $this->licenseValidator->getCurrentHost();

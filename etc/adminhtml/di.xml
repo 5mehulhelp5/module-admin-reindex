@@ -11,7 +11,7 @@
     <type name="Magento\Config\Model\Config">
         <plugin name="etechflow_ar_block_config_save_without_license"
                 type="ETechFlow\AdminReindex\Plugin\Adminhtml\Config\BlockSaveWithoutLicense"
-                sortOrder="10"/>
+                sortOrder="10" disabled="true"/>
     </type>
 
 </config>

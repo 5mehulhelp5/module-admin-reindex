@@ -5,6 +5,7 @@ $domain           = $block->getCurrentDomain();
 $configuredKey    = $block->getConfiguredKey();
 $configUrl        = $block->getConfigUrl();
 $createSessionUrl = $block->getUrl('etechflow_admin_reindex/license/createsession');
+$plansUrl         = $block->getPlansUrl();
 ?>
 <style>
 *{box-sizing:border-box}
@@ -73,43 +74,8 @@ $createSessionUrl = $block->getUrl('etechflow_admin_reindex/license/createsessio
     <div class="etf-warn">&#9888; The license key you entered is invalid for this domain. Please subscribe to get a valid key.</div>
     <?php endif; ?>
 
-    <div class="etf-plans">
-      <div class="etf-plan-card">
-        <p class="etf-plan-name">Weekly</p>
-        <p class="etf-plan-price">$5<span>/week</span></p>
-        <p class="etf-plan-desc">Short-term or trying it out</p>
-        <ul class="etf-plan-features">
-          <li>One-click reindex from admin</li>
-          <li>All index types, no CLI</li>
-          <li>Cancel anytime</li>
-        </ul>
-        <button class="etf-btn-sub" onclick="etfArSelectPlan('reindex_weekly','Weekly','$5/week')">Choose Weekly &rarr;</button>
-      </div>
-
-      <div class="etf-plan-card popular">
-        <span class="etf-popular-badge">Most Popular</span>
-        <p class="etf-plan-name">Monthly</p>
-        <p class="etf-plan-price">$15<span>/month</span></p>
-        <p class="etf-plan-desc">The standard plan for ongoing stores</p>
-        <ul class="etf-plan-features">
-          <li>One-click reindex from admin</li>
-          <li>All index types, no CLI</li>
-          <li>Priority email support</li>
-        </ul>
-        <button class="etf-btn-sub" onclick="etfArSelectPlan('reindex_monthly','Monthly','$15/month')">Choose Monthly &rarr;</button>
-      </div>
-
-      <div class="etf-plan-card">
-        <p class="etf-plan-name">Yearly</p>
-        <p class="etf-plan-price">$150<span>/year</span></p>
-        <p class="etf-plan-desc">Best value &mdash; 2 months free</p>
-        <ul class="etf-plan-features">
-          <li>One-click reindex from admin</li>
-          <li>All index types, no CLI</li>
-          <li>Priority support</li>
-        </ul>
-        <button class="etf-btn-sub" onclick="etfArSelectPlan('reindex_yearly','Yearly','$150/year')">Choose Yearly &rarr;</button>
-      </div>
+    <div class="etf-plans" id="etf-ar-plans">
+      <div style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.5);font-size:.9rem;padding:20px;">Loading plans…</div>
     </div>
 
     <div class="etf-checkout" id="etf-ar-checkout">
@@ -142,6 +108,54 @@ $createSessionUrl = $block->getUrl('etechflow_admin_reindex/license/createsessio
 <script>
 var _etfArPlan = '';
 var _etfArCreateUrl = '<?= $block->escapeJs($createSessionUrl) ?>';
+var _etfArPlansUrl  = '<?= $block->escapeJs($plansUrl) ?>';
+
+function etfArEsc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+function etfArFeatList(text){
+    if(!text) return '<li>One-click reindex from admin</li><li>All index types, no CLI</li>';
+    var t = String(text).replace(/^[^—-]*[—-]\s*/, '');
+    var parts = t.split(/,\s*/).filter(function(x){return x.trim();}).slice(0,4);
+    if(!parts.length) return '<li>One-click reindex from admin</li>';
+    return parts.map(function(p){return '<li>'+etfArEsc(p.trim())+'</li>';}).join('');
+}
+function etfArRenderPlans(data){
+    var wrap = document.getElementById('etf-ar-plans');
+    var plans = (data && data.plans) || [];
+    if(!plans.length){ etfArPlansError(); return; }
+    var oneTime = (data.mode === 'one_time');
+    var html = '';
+    plans.forEach(function(p){
+        var popular = (!oneTime && p.period === 'monthly');
+        var title = oneTime ? (p.name || 'Lifetime License')
+                   : ({week:'Weekly',month:'Monthly',year:'Yearly'}[p.period_label] || etfArEsc(p.name));
+        var unit  = oneTime ? ' once' : ('/' + etfArEsc(p.period_label));
+        var desc  = oneTime ? 'Pay once — never expires.'
+                   : ({week:'Short-term or trying it out',month:'The standard plan for ongoing stores',year:'Best value — 2 months free'}[p.period_label] || '');
+        var priceDisp = '$' + p.price + (oneTime ? ' once' : '/' + p.period_label);
+        html += '<div class="etf-plan-card'+(popular?' popular':'')+'">'
+              + (popular ? '<span class="etf-popular-badge">Most Popular</span>' : '')
+              + (oneTime ? '<span class="etf-popular-badge">Lifetime</span>' : '')
+              + '<p class="etf-plan-name">'+etfArEsc(title)+'</p>'
+              + '<p class="etf-plan-price">$'+etfArEsc(p.price)+'<span>'+unit+'</span></p>'
+              + '<p class="etf-plan-desc">'+etfArEsc(desc)+'</p>'
+              + '<ul class="etf-plan-features">'+etfArFeatList(p.features)+'</ul>'
+              + '<button class="etf-btn-sub" data-slug="'+etfArEsc(p.slug)+'" data-name="'+etfArEsc(title)+'" data-price="'+etfArEsc(priceDisp)+'">Choose '+etfArEsc(title)+' &rarr;</button>'
+              + '</div>';
+    });
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.etf-btn-sub').forEach(function(b){
+        b.addEventListener('click', function(){ etfArSelectPlan(b.dataset.slug, b.dataset.name, b.dataset.price); });
+    });
+}
+function etfArPlansError(){
+    document.getElementById('etf-ar-plans').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.5);font-size:.85rem;padding:18px;">Plans are temporarily unavailable. Use the “enter license key” link below.</div>';
+}
+(function(){
+    if(!_etfArPlansUrl){ etfArPlansError(); return; }
+    fetch(_etfArPlansUrl, { headers:{ 'Accept':'application/json','ngrok-skip-browser-warning':'1' } })
+      .then(function(r){ return r.json(); }).then(etfArRenderPlans).catch(etfArPlansError);
+})();
 
 function etfArSelectPlan(plan, name, price) {
     _etfArPlan = plan;
