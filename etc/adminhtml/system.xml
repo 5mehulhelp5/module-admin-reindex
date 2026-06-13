@@ -56,42 +56,6 @@
                 </field>
             </group>
 
-            <group id="payment" translate="label" type="text" sortOrder="30"
-                   showInDefault="1" showInWebsite="0" showInStore="0">
-                <label>Payment (Stripe)</label>
-                <comment>Add your Stripe keys to enable in-Magento subscription payment.</comment>
-                <field id="stripe_secret_key" translate="label" type="obscure" sortOrder="10"
-                       showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Stripe Secret Key</label>
-                    <comment><![CDATA[sk_live_... or sk_test_...]]></comment>
-                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
-                </field>
-                <field id="stripe_publishable_key" translate="label" type="text" sortOrder="20"
-                       showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Stripe Publishable Key</label>
-                    <comment><![CDATA[pk_live_... or pk_test_...]]></comment>
-                </field>
-                <field id="stripe_price_solo" translate="label" type="text" sortOrder="30"
-                       showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Stripe Price ID: Solo</label>
-                    <comment>Optional. Overrides built-in one-time price (GBP 19).</comment>
-                </field>
-                <field id="stripe_price_growth" translate="label" type="text" sortOrder="40"
-                       showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Stripe Price ID: Growth</label>
-                    <comment>Optional. Overrides built-in one-time price (GBP 39).</comment>
-                </field>
-                <field id="stripe_price_business" translate="label" type="text" sortOrder="50"
-                       showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Stripe Price ID: Business</label>
-                    <comment>Optional. Overrides built-in one-time price (GBP 69).</comment>
-                </field>
-                <field id="stripe_price_all_channels" translate="label" type="text" sortOrder="60"
-                       showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Stripe Price ID: All-Channels</label>
-                    <comment>Optional. Overrides built-in one-time price (GBP 99).</comment>
-                </field>
-            </group>
 
         </section>
     </system>

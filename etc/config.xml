@@ -17,14 +17,6 @@
             <general>
                 <enabled>1</enabled>
             </general>
-            <payment>
-                <stripe_secret_key></stripe_secret_key>
-                <stripe_publishable_key></stripe_publishable_key>
-                <stripe_price_solo></stripe_price_solo>
-                <stripe_price_growth></stripe_price_growth>
-                <stripe_price_business></stripe_price_business>
-                <stripe_price_all_channels></stripe_price_all_channels>
-            </payment>
         </etechflow_adminreindex>
     </default>
 </config>
