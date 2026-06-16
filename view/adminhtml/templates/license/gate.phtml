@@ -80,7 +80,7 @@ $plansUrl         = $block->getPlansUrl();
 
     <div class="etf-checkout" id="etf-ar-checkout">
       <h2>Subscribe to <span id="etf-ar-plan-name-label">Plan</span></h2>
-      <p class="etf-checkout-sub">Price: <strong id="etf-ar-plan-price-label" style="color:#fff"></strong> &nbsp;&middot;&nbsp; Secure payment via Stripe</p>
+      <p class="etf-checkout-sub">Price: <strong id="etf-ar-plan-price-label" style="color:#fff"></strong> &nbsp;&middot;&nbsp; Secure card payment</p>
       <div class="etf-form-row">
         <div class="etf-field">
           <label for="etf-ar-name">Full Name</label>
@@ -95,7 +95,7 @@ $plansUrl         = $block->getPlansUrl();
         <button class="etf-btn-pay" id="etf-ar-pay-btn" onclick="etfArProceedToPayment()">Proceed to Payment &rarr;</button>
         <button class="etf-btn-back" onclick="etfArBack()">&larr; Choose Different Plan</button>
       </div>
-      <p class="etf-checkout-note">&#128274; You will be redirected to Stripe's secure checkout. After payment, your license key is automatically activated.</p>
+      <p class="etf-checkout-note">&#128274; You will be redirected to our secure checkout. After payment, your license key is automatically activated.</p>
     </div>
 
     <div class="etf-already">
@@ -198,7 +198,7 @@ async function etfArProceedToPayment() {
         try { data = JSON.parse(rawText); } catch(e) { alert('Server response: ' + rawText.substring(0,300)); btn.textContent=orig; btn.disabled=false; return; }
 
         if (data.error) { alert('Error: ' + data.error); btn.textContent=orig; btn.disabled=false; }
-        else if (data.url) { btn.textContent='Redirecting to Stripe…'; window.location.href=data.url; }
+        else if (data.url) { btn.textContent='Redirecting to checkout…'; window.location.href=data.url; }
         else { alert('Unexpected response. Please try again.'); btn.textContent=orig; btn.disabled=false; }
     } catch(e) { alert('Network error: ' + e.message); btn.textContent=orig; btn.disabled=false; }
 }
