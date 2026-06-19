@@ -3,6 +3,10 @@
       xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
         <referenceContainer name="content">
+            <block class="Magento\Backend\Block\Template"
+                   name="etechflow_admin_reindex_update_notice"
+                   template="ETechFlow_AdminReindex::update-notice.phtml"
+                   cacheable="false"/>
             <block class="ETechFlow\AdminReindex\Block\Adminhtml\License\Gate"
                    name="etechflow_admin_reindex_license_gate"
                    template="ETechFlow_AdminReindex::license/gate.phtml"/>
