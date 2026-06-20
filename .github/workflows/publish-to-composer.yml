@@ -1,18 +1,22 @@
 name: Publish to eTechFlow Composer repo
 
 # Bake the module into a versioned dist zip and push it to the private eTechFlow
-# Composer repo (/composer/publish).
-#  * On a published GitHub Release: tag = version, release body = changelog.
-#  * Manual run (workflow_dispatch): supply the version (and optional changelog).
+# Composer repo (/composer/publish). Auto-publishes on ANY of:
+#   * a published GitHub Release   (version = tag, changelog = release body)
+#   * a pushed version tag  v*.*.* (version = tag, changelog = empty)  <- most reliable
+#   * a manual run (workflow_dispatch) with a version + optional changelog
 # MODULE_DIR is the path (relative to repo root) of the folder with composer.json.
 
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish (e.g. 1.2.2)'
+        description: 'Version to publish (e.g. 1.2.3)'
         required: true
       changelog:
         description: 'Release notes (optional)'
@@ -29,13 +33,15 @@ jobs:
         id: meta
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "release" ]; then
-            V="${{ github.event.release.tag_name }}"; V="${V#v}"
-            REF="${{ github.event.release.tag_name }}"
-          else
-            V="${{ github.event.inputs.version }}"; V="${V#v}"
-            REF="${{ github.ref_name }}"
-          fi
+          case "${{ github.event_name }}" in
+            release)
+              V="${{ github.event.release.tag_name }}"; REF="${{ github.event.release.tag_name }}" ;;
+            push)
+              V="${{ github.ref_name }}"; REF="${{ github.ref_name }}" ;;
+            *)
+              V="${{ github.event.inputs.version }}"; REF="${{ github.ref_name }}" ;;
+          esac
+          V="${V#v}"
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
 
